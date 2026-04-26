@@ -1,0 +1,12 @@
+services:
+  spark-env:
+    build: .
+    container_name: spark_instacart
+    ports:
+      - "4040:4040"   # Spark UI — open http://localhost:4040 while a job is running
+    volumes:
+      - .:/app
+    working_dir: /app
+    environment:
+      - PYSPARK_PYTHON=python3
+      - PYSPARK_DRIVER_PYTHON=python3
