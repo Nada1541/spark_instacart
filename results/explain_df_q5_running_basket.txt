@@ -1,0 +1,64 @@
+== Parsed Logical Plan ==
+'Project ['user_id, 'order_number, 'order_ts, 'basket_size, 'running_avg_basket, 'cumulative_items]
++- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373, cumulative_items#386L]
+   +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373, cumulative_items#386L, cumulative_items#386L]
+      +- Window [sum(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS cumulative_items#386L], [user_id#17], [order_number#19 ASC NULLS FIRST]
+         +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373]
+            +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373]
+               +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373, running_avg_basket#373]
+                  +- Window [avg(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS running_avg_basket#373], [user_id#17], [order_number#19 ASC NULLS FIRST]
+                     +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L]
+                        +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L]
+                           +- Join Inner, (order_id#16 = order_id#34)
+                              :- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+                              +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#359L]
+                                 +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+
+== Analyzed Logical Plan ==
+user_id: int, order_number: int, order_ts: timestamp, basket_size: bigint, running_avg_basket: double, cumulative_items: bigint
+Project [user_id#17, order_number#19, order_ts#24, basket_size#359L, running_avg_basket#373, cumulative_items#386L]
++- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373, cumulative_items#386L]
+   +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373, cumulative_items#386L, cumulative_items#386L]
+      +- Window [sum(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS cumulative_items#386L], [user_id#17], [order_number#19 ASC NULLS FIRST]
+         +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373]
+            +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373]
+               +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L, running_avg_basket#373, running_avg_basket#373]
+                  +- Window [avg(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS running_avg_basket#373], [user_id#17], [order_number#19 ASC NULLS FIRST]
+                     +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L]
+                        +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#359L]
+                           +- Join Inner, (order_id#16 = order_id#34)
+                              :- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+                              +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#359L]
+                                 +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+
+== Optimized Logical Plan ==
+Window [avg(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS running_avg_basket#373, sum(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS cumulative_items#386L], [user_id#17], [order_number#19 ASC NULLS FIRST]
++- Project [user_id#17, order_number#19, order_ts#24, basket_size#359L]
+   +- Join Inner, (order_id#16 = order_id#34)
+      :- Project [order_id#16, user_id#17, order_number#19, order_ts#24]
+      :  +- Filter isnotnull(order_id#16)
+      :     +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+      +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#359L]
+         +- Project [order_id#34]
+            +- Filter isnotnull(order_id#34)
+               +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+
+== Physical Plan ==
+Window [avg(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS running_avg_basket#373, sum(basket_size#359L) windowspecdefinition(user_id#17, order_number#19 ASC NULLS FIRST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS cumulative_items#386L], [user_id#17], [order_number#19 ASC NULLS FIRST]
++- *(6) Sort [user_id#17 ASC NULLS FIRST, order_number#19 ASC NULLS FIRST], false, 0
+   +- Exchange hashpartitioning(user_id#17, 64), ENSURE_REQUIREMENTS, [plan_id=1289]
+      +- *(5) Project [user_id#17, order_number#19, order_ts#24, basket_size#359L]
+         +- *(5) SortMergeJoin [order_id#16], [order_id#34], Inner
+            :- *(2) Sort [order_id#16 ASC NULLS FIRST], false, 0
+            :  +- Exchange hashpartitioning(order_id#16, 64), ENSURE_REQUIREMENTS, [plan_id=1270]
+            :     +- *(1) Filter isnotnull(order_id#16)
+            :        +- *(1) ColumnarToRow
+            :           +- FileScan parquet [order_id#16,user_id#17,order_number#19,order_ts#24] Batched: true, DataFilters: [isnotnull(order_id#16)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int,user_id:int,order_number:int,order_ts:timestamp>
+            +- *(4) Sort [order_id#34 ASC NULLS FIRST], false, 0
+               +- *(4) HashAggregate(keys=[order_id#34], functions=[count(1)], output=[order_id#34, basket_size#359L])
+                  +- Exchange hashpartitioning(order_id#34, 64), ENSURE_REQUIREMENTS, [plan_id=1280]
+                     +- *(3) HashAggregate(keys=[order_id#34], functions=[partial_count(1)], output=[order_id#34, count#406L])
+                        +- *(3) Filter isnotnull(order_id#34)
+                           +- *(3) ColumnarToRow
+                              +- FileScan parquet [order_id#34] Batched: true, DataFilters: [isnotnull(order_id#34)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int>
+

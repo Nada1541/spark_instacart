@@ -1,0 +1,26 @@
+== Parsed Logical Plan ==
+'Project ['COUNT(1) AS total_orders#81, 'COUNT(distinct 'user_id) AS unique_users#82, 'AVG('days_since_prior_order) AS avg_days_between#83, 'MIN('order_hour_of_day) AS earliest_hour#84, 'MAX('order_hour_of_day) AS latest_hour#85, 'SUM(CASE WHEN 'order_dow IN (0,1) THEN 1 ELSE 0 END) AS weekend_orders#86]
++- 'UnresolvedRelation [orders], [], false
+
+== Analyzed Logical Plan ==
+total_orders: bigint, unique_users: bigint, avg_days_between: double, earliest_hour: int, latest_hour: int, weekend_orders: bigint
+Aggregate [count(1) AS total_orders#81L, count(distinct user_id#17) AS unique_users#82L, avg(days_since_prior_order#22) AS avg_days_between#83, min(order_hour_of_day#21) AS earliest_hour#84, max(order_hour_of_day#21) AS latest_hour#85, sum(CASE WHEN order_dow#20 IN (0,1) THEN 1 ELSE 0 END) AS weekend_orders#86L]
++- SubqueryAlias orders
+   +- View (`orders`, [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24])
+      +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+
+== Optimized Logical Plan ==
+Aggregate [count(1) AS total_orders#81L, count(distinct user_id#17) AS unique_users#82L, avg(days_since_prior_order#22) AS avg_days_between#83, min(order_hour_of_day#21) AS earliest_hour#84, max(order_hour_of_day#21) AS latest_hour#85, sum(CASE WHEN order_dow#20 IN (0,1) THEN 1 ELSE 0 END) AS weekend_orders#86L]
++- Project [user_id#17, order_dow#20, order_hour_of_day#21, days_since_prior_order#22]
+   +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+
+== Physical Plan ==
+*(3) HashAggregate(keys=[], functions=[count(1), avg(days_since_prior_order#22), min(order_hour_of_day#21), max(order_hour_of_day#21), sum(CASE WHEN order_dow#20 IN (0,1) THEN 1 ELSE 0 END), count(distinct user_id#17)], output=[total_orders#81L, unique_users#82L, avg_days_between#83, earliest_hour#84, latest_hour#85, weekend_orders#86L])
++- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=297]
+   +- *(2) HashAggregate(keys=[], functions=[merge_count(1), merge_avg(days_since_prior_order#22), merge_min(order_hour_of_day#21), merge_max(order_hour_of_day#21), merge_sum(CASE WHEN order_dow#20 IN (0,1) THEN 1 ELSE 0 END), partial_count(distinct user_id#17)], output=[count#100L, sum#103, count#104L, min#106, max#108, sum#110L, count#113L])
+      +- *(2) HashAggregate(keys=[user_id#17], functions=[merge_count(1), merge_avg(days_since_prior_order#22), merge_min(order_hour_of_day#21), merge_max(order_hour_of_day#21), merge_sum(CASE WHEN order_dow#20 IN (0,1) THEN 1 ELSE 0 END)], output=[user_id#17, count#100L, sum#103, count#104L, min#106, max#108, sum#110L])
+         +- Exchange hashpartitioning(user_id#17, 64), ENSURE_REQUIREMENTS, [plan_id=292]
+            +- *(1) HashAggregate(keys=[user_id#17], functions=[partial_count(1), partial_avg(days_since_prior_order#22), partial_min(order_hour_of_day#21), partial_max(order_hour_of_day#21), partial_sum(CASE WHEN order_dow#20 IN (0,1) THEN 1 ELSE 0 END)], output=[user_id#17, count#100L, sum#103, count#104L, min#106, max#108, sum#110L])
+               +- *(1) ColumnarToRow
+                  +- FileScan parquet [user_id#17,order_dow#20,order_hour_of_day#21,days_since_prior_order#22] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<user_id:int,order_dow:int,order_hour_of_day:int,days_since_prior_order:double>
+

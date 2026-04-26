@@ -1,0 +1,45 @@
+== Parsed Logical Plan ==
+'Sort ['order_dow ASC NULLS FIRST], true
++- Aggregate [order_dow#20], [order_dow#20, count(1) AS line_items#584L, avg(reordered#37) AS reorder_rate#586]
+   +- Project [order_id#34, product_id#35, add_to_cart_order#36, reordered#37, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24]
+      +- Join Inner, (order_id#34 = order_id#16)
+         :- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+         +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+
+== Analyzed Logical Plan ==
+order_dow: int, line_items: bigint, reorder_rate: double
+Sort [order_dow#20 ASC NULLS FIRST], true
++- Aggregate [order_dow#20], [order_dow#20, count(1) AS line_items#584L, avg(reordered#37) AS reorder_rate#586]
+   +- Project [order_id#34, product_id#35, add_to_cart_order#36, reordered#37, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24]
+      +- Join Inner, (order_id#34 = order_id#16)
+         :- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+         +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+
+== Optimized Logical Plan ==
+Sort [order_dow#20 ASC NULLS FIRST], true
++- Aggregate [order_dow#20], [order_dow#20, count(1) AS line_items#584L, avg(reordered#37) AS reorder_rate#586]
+   +- Project [reordered#37, order_dow#20]
+      +- Join Inner, (order_id#34 = order_id#16)
+         :- Project [order_id#34, reordered#37]
+         :  +- Filter isnotnull(order_id#34)
+         :     +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+         +- Project [order_id#16, order_dow#20]
+            +- Filter isnotnull(order_id#16)
+               +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+
+== Physical Plan ==
+*(4) Sort [order_dow#20 ASC NULLS FIRST], true, 0
++- Exchange rangepartitioning(order_dow#20 ASC NULLS FIRST, 64), ENSURE_REQUIREMENTS, [plan_id=2545]
+   +- *(3) HashAggregate(keys=[order_dow#20], functions=[count(1), avg(reordered#37)], output=[order_dow#20, line_items#584L, reorder_rate#586])
+      +- Exchange hashpartitioning(order_dow#20, 64), ENSURE_REQUIREMENTS, [plan_id=2541]
+         +- *(2) HashAggregate(keys=[order_dow#20], functions=[partial_count(1), partial_avg(reordered#37)], output=[order_dow#20, count#593L, sum#594, count#595L])
+            +- *(2) Project [reordered#37, order_dow#20]
+               +- *(2) BroadcastHashJoin [order_id#34], [order_id#16], Inner, BuildRight, false
+                  :- *(2) Filter isnotnull(order_id#34)
+                  :  +- *(2) ColumnarToRow
+                  :     +- FileScan parquet [order_id#34,reordered#37] Batched: true, DataFilters: [isnotnull(order_id#34)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int,reordered:int>
+                  +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=2535]
+                     +- *(1) Filter isnotnull(order_id#16)
+                        +- *(1) ColumnarToRow
+                           +- FileScan parquet [order_id#16,order_dow#20] Batched: true, DataFilters: [isnotnull(order_id#16)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int,order_dow:int>
+

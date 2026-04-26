@@ -1,0 +1,81 @@
+== Parsed Logical Plan ==
+'Sort ['department ASC NULLS FIRST, 'rank ASC NULLS FIRST], true
++- Filter (rank#288 <= 5)
+   +- Project [department#5, product_id#35, product_name#9, total_reorders#281L, rank#288]
+      +- Project [department#5, product_id#35, product_name#9, total_reorders#281L, rank#288, rank#288]
+         +- Window [rank(total_reorders#281L) windowspecdefinition(department#5, total_reorders#281L DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank#288], [department#5], [total_reorders#281L DESC NULLS LAST]
+            +- Project [department#5, product_id#35, product_name#9, total_reorders#281L]
+               +- Aggregate [department#5, product_id#35, product_name#9], [department#5, product_id#35, product_name#9, sum(reordered#37) AS total_reorders#281L]
+                  +- Project [department_id#11, product_id#35, order_id#34, add_to_cart_order#36, reordered#37, product_name#9, aisle_id#10, department#5]
+                     +- Join Inner, (department_id#11 = department_id#4)
+                        :- Project [product_id#35, order_id#34, add_to_cart_order#36, reordered#37, product_name#9, aisle_id#10, department_id#11]
+                        :  +- Join Inner, (product_id#35 = product_id#8)
+                        :     :- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+                        :     +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+                        +- Relation [department_id#4,department#5] parquet
+
+== Analyzed Logical Plan ==
+department: string, product_id: int, product_name: string, total_reorders: bigint, rank: int
+Sort [department#5 ASC NULLS FIRST, rank#288 ASC NULLS FIRST], true
++- Filter (rank#288 <= 5)
+   +- Project [department#5, product_id#35, product_name#9, total_reorders#281L, rank#288]
+      +- Project [department#5, product_id#35, product_name#9, total_reorders#281L, rank#288, rank#288]
+         +- Window [rank(total_reorders#281L) windowspecdefinition(department#5, total_reorders#281L DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank#288], [department#5], [total_reorders#281L DESC NULLS LAST]
+            +- Project [department#5, product_id#35, product_name#9, total_reorders#281L]
+               +- Aggregate [department#5, product_id#35, product_name#9], [department#5, product_id#35, product_name#9, sum(reordered#37) AS total_reorders#281L]
+                  +- Project [department_id#11, product_id#35, order_id#34, add_to_cart_order#36, reordered#37, product_name#9, aisle_id#10, department#5]
+                     +- Join Inner, (department_id#11 = department_id#4)
+                        :- Project [product_id#35, order_id#34, add_to_cart_order#36, reordered#37, product_name#9, aisle_id#10, department_id#11]
+                        :  +- Join Inner, (product_id#35 = product_id#8)
+                        :     :- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+                        :     +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+                        +- Relation [department_id#4,department#5] parquet
+
+== Optimized Logical Plan ==
+Sort [department#5 ASC NULLS FIRST, rank#288 ASC NULLS FIRST], true
++- Filter (rank#288 <= 5)
+   +- Window [rank(total_reorders#281L) windowspecdefinition(department#5, total_reorders#281L DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank#288], [department#5], [total_reorders#281L DESC NULLS LAST]
+      +- WindowGroupLimit [department#5], [total_reorders#281L DESC NULLS LAST], rank(total_reorders#281L), 5
+         +- Aggregate [department#5, product_id#35, product_name#9], [department#5, product_id#35, product_name#9, sum(reordered#37) AS total_reorders#281L]
+            +- Project [product_id#35, reordered#37, product_name#9, department#5]
+               +- Join Inner, (department_id#11 = department_id#4)
+                  :- Project [product_id#35, reordered#37, product_name#9, department_id#11]
+                  :  +- Join Inner, (product_id#35 = product_id#8)
+                  :     :- Project [product_id#35, reordered#37]
+                  :     :  +- Filter isnotnull(product_id#35)
+                  :     :     +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+                  :     +- Project [product_id#8, product_name#9, department_id#11]
+                  :        +- Filter (isnotnull(product_id#8) AND isnotnull(department_id#11))
+                  :           +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+                  +- Filter isnotnull(department_id#4)
+                     +- Relation [department_id#4,department#5] parquet
+
+== Physical Plan ==
+*(7) Sort [department#5 ASC NULLS FIRST, rank#288 ASC NULLS FIRST], true, 0
++- Exchange rangepartitioning(department#5 ASC NULLS FIRST, rank#288 ASC NULLS FIRST, 64), ENSURE_REQUIREMENTS, [plan_id=899]
+   +- *(6) Filter (rank#288 <= 5)
+      +- Window [rank(total_reorders#281L) windowspecdefinition(department#5, total_reorders#281L DESC NULLS LAST, specifiedwindowframe(RowFrame, unboundedpreceding$(), currentrow$())) AS rank#288], [department#5], [total_reorders#281L DESC NULLS LAST]
+         +- WindowGroupLimit [department#5], [total_reorders#281L DESC NULLS LAST], rank(total_reorders#281L), 5, Final
+            +- *(5) Sort [department#5 ASC NULLS FIRST, total_reorders#281L DESC NULLS LAST], false, 0
+               +- Exchange hashpartitioning(department#5, 64), ENSURE_REQUIREMENTS, [plan_id=890]
+                  +- WindowGroupLimit [department#5], [total_reorders#281L DESC NULLS LAST], rank(total_reorders#281L), 5, Partial
+                     +- *(4) Sort [department#5 ASC NULLS FIRST, total_reorders#281L DESC NULLS LAST], false, 0
+                        +- *(4) HashAggregate(keys=[department#5, product_id#35, product_name#9], functions=[sum(reordered#37)], output=[department#5, product_id#35, product_name#9, total_reorders#281L])
+                           +- Exchange hashpartitioning(department#5, product_id#35, product_name#9, 64), ENSURE_REQUIREMENTS, [plan_id=884]
+                              +- *(3) HashAggregate(keys=[department#5, product_id#35, product_name#9], functions=[partial_sum(reordered#37)], output=[department#5, product_id#35, product_name#9, sum#301L])
+                                 +- *(3) Project [product_id#35, reordered#37, product_name#9, department#5]
+                                    +- *(3) BroadcastHashJoin [department_id#11], [department_id#4], Inner, BuildRight, false
+                                       :- *(3) Project [product_id#35, reordered#37, product_name#9, department_id#11]
+                                       :  +- *(3) BroadcastHashJoin [product_id#35], [product_id#8], Inner, BuildRight, false
+                                       :     :- *(3) Filter isnotnull(product_id#35)
+                                       :     :  +- *(3) ColumnarToRow
+                                       :     :     +- FileScan parquet [product_id#35,reordered#37] Batched: true, DataFilters: [isnotnull(product_id#35)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(product_id)], ReadSchema: struct<product_id:int,reordered:int>
+                                       :     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=870]
+                                       :        +- *(1) Filter (isnotnull(product_id#8) AND isnotnull(department_id#11))
+                                       :           +- *(1) ColumnarToRow
+                                       :              +- FileScan parquet [product_id#8,product_name#9,department_id#11] Batched: true, DataFilters: [isnotnull(product_id#8), isnotnull(department_id#11)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/products], PartitionFilters: [], PushedFilters: [IsNotNull(product_id), IsNotNull(department_id)], ReadSchema: struct<product_id:int,product_name:string,department_id:int>
+                                       +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=878]
+                                          +- *(2) Filter isnotnull(department_id#4)
+                                             +- *(2) ColumnarToRow
+                                                +- FileScan parquet [department_id#4,department#5] Batched: true, DataFilters: [isnotnull(department_id#4)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/departments], PartitionFilters: [], PushedFilters: [IsNotNull(department_id)], ReadSchema: struct<department_id:int,department:string>
+

@@ -1,0 +1,4 @@
+query,csv_sec,parquet_sec,speedup
+filter_only_one_column,20.117,1.836,10.96x
+agg_two_columns,19.560,3.211,6.09x
+broadcast_join,23.698,4.891,4.85x

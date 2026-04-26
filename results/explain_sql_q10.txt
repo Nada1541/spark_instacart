@@ -1,0 +1,21 @@
+== Parsed Logical Plan ==
+'Project [*]
++- 'Filter ('department_id = 4)
+   +- 'UnresolvedRelation [products_partitioned], [], false
+
+== Analyzed Logical Plan ==
+product_id: int, product_name: string, aisle_id: int, department_id: int
+Project [product_id#949, product_name#950, aisle_id#951, department_id#952]
++- Filter (department_id#952 = 4)
+   +- SubqueryAlias products_partitioned
+      +- View (`products_partitioned`, [product_id#949,product_name#950,aisle_id#951,department_id#952])
+         +- Relation [product_id#949,product_name#950,aisle_id#951,department_id#952] parquet
+
+== Optimized Logical Plan ==
+Filter (isnotnull(department_id#952) AND (department_id#952 = 4))
++- Relation [product_id#949,product_name#950,aisle_id#951,department_id#952] parquet
+
+== Physical Plan ==
+*(1) ColumnarToRow
++- FileScan parquet [product_id#949,product_name#950,aisle_id#951,department_id#952] Batched: true, DataFilters: [], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/products_partitioned.parquet], PartitionFilters: [isnotnull(department_id#952), (department_id#952 = 4)], PushedFilters: [], ReadSchema: struct<product_id:int,product_name:string,aisle_id:int>
+

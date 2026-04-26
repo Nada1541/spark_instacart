@@ -1,0 +1,94 @@
+== Parsed Logical Plan ==
+CTE [basket, user_avg]
+:  :- 'SubqueryAlias basket
+:  :  +- 'Aggregate ['order_id], ['order_id, 'COUNT(1) AS basket_size#332]
+:  :     +- 'UnresolvedRelation [prior], [], false
+:  +- 'SubqueryAlias user_avg
+:     +- 'Aggregate ['o.user_id], ['o.user_id, 'AVG('b.basket_size) AS user_avg_basket#333]
+:        +- 'Join Inner, ('o.order_id = 'b.order_id)
+:           :- 'SubqueryAlias o
+:           :  +- 'UnresolvedRelation [orders], [], false
+:           +- 'SubqueryAlias b
+:              +- 'UnresolvedRelation [basket], [], false
++- 'Project ['user_id, 'user_avg_basket]
+   +- 'Filter ('user_avg_basket > scalar-subquery#331 [])
+      :  +- 'Project [unresolvedalias('AVG('user_avg_basket), None)]
+      :     +- 'UnresolvedRelation [user_avg], [], false
+      +- 'UnresolvedRelation [user_avg], [], false
+
+== Analyzed Logical Plan ==
+user_id: int, user_avg_basket: double
+WithCTE
+:- CTERelationDef 8, false
+:  +- SubqueryAlias basket
+:     +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#332L]
+:        +- SubqueryAlias prior
+:           +- View (`prior`, [order_id#34,product_id#35,add_to_cart_order#36,reordered#37])
+:              +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+:- CTERelationDef 9, false
+:  +- SubqueryAlias user_avg
+:     +- Aggregate [user_id#17], [user_id#17, avg(basket_size#332L) AS user_avg_basket#333]
+:        +- Join Inner, (order_id#16 = order_id#34)
+:           :- SubqueryAlias o
+:           :  +- SubqueryAlias orders
+:           :     +- View (`orders`, [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24])
+:           :        +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+:           +- SubqueryAlias b
+:              +- SubqueryAlias basket
+:                 +- CTERelationRef 8, true, [order_id#34, basket_size#332L], false
++- Project [user_id#17, user_avg_basket#333]
+   +- Filter (user_avg_basket#333 > scalar-subquery#331 [])
+      :  +- Aggregate [avg(user_avg_basket#337) AS avg(user_avg_basket)#339]
+      :     +- SubqueryAlias user_avg
+      :        +- CTERelationRef 9, true, [user_id#336, user_avg_basket#337], false
+      +- SubqueryAlias user_avg
+         +- CTERelationRef 9, true, [user_id#17, user_avg_basket#333], false
+
+== Optimized Logical Plan ==
+Filter (isnotnull(user_avg_basket#333) AND (user_avg_basket#333 > scalar-subquery#331 []))
+:  +- Aggregate [avg(user_avg_basket#337) AS avg(user_avg_basket)#339]
+:     +- Aggregate [user_id#357], [avg(basket_size#332L) AS user_avg_basket#337]
+:        +- Project [user_id#357, basket_size#332L]
+:           +- Join Inner, (order_id#356 = order_id#365)
+:              :- Project [order_id#356, user_id#357]
+:              :  +- Filter isnotnull(order_id#356)
+:              :     +- Relation [order_id#356,user_id#357,eval_set#358,order_number#359,order_dow#360,order_hour_of_day#361,days_since_prior_order#362,order_date#363,order_ts#364] parquet
+:              +- Aggregate [order_id#365], [order_id#365, count(1) AS basket_size#332L]
+:                 +- Project [order_id#365]
+:                    +- Filter isnotnull(order_id#365)
+:                       +- Relation [order_id#365,product_id#366,add_to_cart_order#367,reordered#368] parquet
++- Aggregate [user_id#17], [user_id#17, avg(basket_size#332L) AS user_avg_basket#333]
+   +- Project [user_id#17, basket_size#332L]
+      +- Join Inner, (order_id#16 = order_id#34)
+         :- Project [order_id#16, user_id#17]
+         :  +- Filter isnotnull(order_id#16)
+         :     +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+         +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#332L]
+            +- Project [order_id#34]
+               +- Filter isnotnull(order_id#34)
+                  +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+
+== Physical Plan ==
+*(4) Filter (isnotnull(user_avg_basket#333) AND (user_avg_basket#333 > Subquery scalar-subquery#331, [id=#1741]))
+:  +- Subquery scalar-subquery#331, [id=#1741]
+:     +- *(5) HashAggregate(keys=[], functions=[avg(user_avg_basket#337)], output=[avg(user_avg_basket)#339])
+:        +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1730]
+:           +- *(4) HashAggregate(keys=[], functions=[partial_avg(user_avg_basket#337)], output=[sum#378, count#379L])
+:              +- *(4) HashAggregate(keys=[user_id#357], functions=[avg(basket_size#332L)], output=[user_avg_basket#337])
+:                 +- ReusedExchange [user_id#357, sum#372, count#373L], Exchange hashpartitioning(user_id#17, 64), ENSURE_REQUIREMENTS, [plan_id=1650]
++- *(4) HashAggregate(keys=[user_id#17], functions=[avg(basket_size#332L)], output=[user_id#17, user_avg_basket#333])
+   +- Exchange hashpartitioning(user_id#17, 64), ENSURE_REQUIREMENTS, [plan_id=1650]
+      +- *(3) HashAggregate(keys=[user_id#17], functions=[partial_avg(basket_size#332L)], output=[user_id#17, sum#372, count#373L])
+         +- *(3) Project [user_id#17, basket_size#332L]
+            +- *(3) BroadcastHashJoin [order_id#16], [order_id#34], Inner, BuildLeft, false
+               :- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=1636]
+               :  +- *(1) Filter isnotnull(order_id#16)
+               :     +- *(1) ColumnarToRow
+               :        +- FileScan parquet [order_id#16,user_id#17] Batched: true, DataFilters: [isnotnull(order_id#16)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int,user_id:int>
+               +- *(3) HashAggregate(keys=[order_id#34], functions=[count(1)], output=[order_id#34, basket_size#332L])
+                  +- Exchange hashpartitioning(order_id#34, 64), ENSURE_REQUIREMENTS, [plan_id=1643]
+                     +- *(2) HashAggregate(keys=[order_id#34], functions=[partial_count(1)], output=[order_id#34, count#375L])
+                        +- *(2) Filter isnotnull(order_id#34)
+                           +- *(2) ColumnarToRow
+                              +- FileScan parquet [order_id#34] Batched: true, DataFilters: [isnotnull(order_id#34)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int>
+

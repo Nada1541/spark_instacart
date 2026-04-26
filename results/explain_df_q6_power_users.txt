@@ -1,0 +1,91 @@
+== Parsed Logical Plan ==
+'Project ['user_id, 'user_avg_basket, 'global_avg]
++- Filter (user_avg_basket#447 > global_avg#451)
+   +- Join Cross
+      :- Aggregate [user_id#17], [user_id#17, avg(basket_size#423L) AS user_avg_basket#447]
+      :  +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#423L]
+      :     +- Join Inner, (order_id#16 = order_id#34)
+      :        :- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+      :        +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#423L]
+      :           +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+      +- ResolvedHint (strategy=broadcast)
+         +- Aggregate [avg(user_avg_basket#447) AS global_avg#451]
+            +- Aggregate [user_id#456], [user_id#456, avg(basket_size#423L) AS user_avg_basket#447]
+               +- Project [order_id#455, user_id#456, eval_set#457, order_number#458, order_dow#459, order_hour_of_day#460, days_since_prior_order#461, order_date#462, order_ts#463, basket_size#423L]
+                  +- Join Inner, (order_id#455 = order_id#464)
+                     :- Relation [order_id#455,user_id#456,eval_set#457,order_number#458,order_dow#459,order_hour_of_day#460,days_since_prior_order#461,order_date#462,order_ts#463] parquet
+                     +- Aggregate [order_id#464], [order_id#464, count(1) AS basket_size#423L]
+                        +- Relation [order_id#464,product_id#465,add_to_cart_order#466,reordered#467] parquet
+
+== Analyzed Logical Plan ==
+user_id: int, user_avg_basket: double, global_avg: double
+Project [user_id#17, user_avg_basket#447, global_avg#451]
++- Filter (user_avg_basket#447 > global_avg#451)
+   +- Join Cross
+      :- Aggregate [user_id#17], [user_id#17, avg(basket_size#423L) AS user_avg_basket#447]
+      :  +- Project [order_id#16, user_id#17, eval_set#18, order_number#19, order_dow#20, order_hour_of_day#21, days_since_prior_order#22, order_date#23, order_ts#24, basket_size#423L]
+      :     +- Join Inner, (order_id#16 = order_id#34)
+      :        :- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+      :        +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#423L]
+      :           +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+      +- ResolvedHint (strategy=broadcast)
+         +- Aggregate [avg(user_avg_basket#447) AS global_avg#451]
+            +- Aggregate [user_id#456], [user_id#456, avg(basket_size#423L) AS user_avg_basket#447]
+               +- Project [order_id#455, user_id#456, eval_set#457, order_number#458, order_dow#459, order_hour_of_day#460, days_since_prior_order#461, order_date#462, order_ts#463, basket_size#423L]
+                  +- Join Inner, (order_id#455 = order_id#464)
+                     :- Relation [order_id#455,user_id#456,eval_set#457,order_number#458,order_dow#459,order_hour_of_day#460,days_since_prior_order#461,order_date#462,order_ts#463] parquet
+                     +- Aggregate [order_id#464], [order_id#464, count(1) AS basket_size#423L]
+                        +- Relation [order_id#464,product_id#465,add_to_cart_order#466,reordered#467] parquet
+
+== Optimized Logical Plan ==
+Join Cross, (user_avg_basket#447 > global_avg#451), rightHint=(strategy=broadcast)
+:- Filter isnotnull(user_avg_basket#447)
+:  +- Aggregate [user_id#17], [user_id#17, avg(basket_size#423L) AS user_avg_basket#447]
+:     +- Project [user_id#17, basket_size#423L]
+:        +- Join Inner, (order_id#16 = order_id#34)
+:           :- Project [order_id#16, user_id#17]
+:           :  +- Filter isnotnull(order_id#16)
+:           :     +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+:           +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#423L]
+:              +- Project [order_id#34]
+:                 +- Filter isnotnull(order_id#34)
+:                    +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
++- Filter isnotnull(global_avg#451)
+   +- Aggregate [avg(user_avg_basket#447) AS global_avg#451]
+      +- Aggregate [user_id#456], [avg(basket_size#423L) AS user_avg_basket#447]
+         +- Project [user_id#456, basket_size#423L]
+            +- Join Inner, (order_id#455 = order_id#464)
+               :- Project [order_id#455, user_id#456]
+               :  +- Filter isnotnull(order_id#455)
+               :     +- Relation [order_id#455,user_id#456,eval_set#457,order_number#458,order_dow#459,order_hour_of_day#460,days_since_prior_order#461,order_date#462,order_ts#463] parquet
+               +- Aggregate [order_id#464], [order_id#464, count(1) AS basket_size#423L]
+                  +- Project [order_id#464]
+                     +- Filter isnotnull(order_id#464)
+                        +- Relation [order_id#464,product_id#465,add_to_cart_order#466,reordered#467] parquet
+
+== Physical Plan ==
+*(9) BroadcastNestedLoopJoin BuildRight, Cross, (user_avg_basket#447 > global_avg#451)
+:- *(9) Filter isnotnull(user_avg_basket#447)
+:  +- *(9) HashAggregate(keys=[user_id#17], functions=[avg(basket_size#423L)], output=[user_id#17, user_avg_basket#447])
+:     +- Exchange hashpartitioning(user_id#17, 64), ENSURE_REQUIREMENTS, [plan_id=1638]
+:        +- *(3) HashAggregate(keys=[user_id#17], functions=[partial_avg(basket_size#423L)], output=[user_id#17, sum#478, count#479L])
+:           +- *(3) Project [user_id#17, basket_size#423L]
+:              +- *(3) BroadcastHashJoin [order_id#16], [order_id#34], Inner, BuildLeft, false
+:                 :- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=1624]
+:                 :  +- *(1) Filter isnotnull(order_id#16)
+:                 :     +- *(1) ColumnarToRow
+:                 :        +- FileScan parquet [order_id#16,user_id#17] Batched: true, DataFilters: [isnotnull(order_id#16)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int,user_id:int>
+:                 +- *(3) HashAggregate(keys=[order_id#34], functions=[count(1)], output=[order_id#34, basket_size#423L])
+:                    +- Exchange hashpartitioning(order_id#34, 64), ENSURE_REQUIREMENTS, [plan_id=1631]
+:                       +- *(2) HashAggregate(keys=[order_id#34], functions=[partial_count(1)], output=[order_id#34, count#481L])
+:                          +- *(2) Filter isnotnull(order_id#34)
+:                             +- *(2) ColumnarToRow
+:                                +- FileScan parquet [order_id#34] Batched: true, DataFilters: [isnotnull(order_id#34)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int>
++- BroadcastExchange IdentityBroadcastMode, [plan_id=1761]
+   +- *(8) Filter isnotnull(global_avg#451)
+      +- *(8) HashAggregate(keys=[], functions=[avg(user_avg_basket#447)], output=[global_avg#451])
+         +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1749]
+            +- *(7) HashAggregate(keys=[], functions=[partial_avg(user_avg_basket#447)], output=[sum#484, count#485L])
+               +- *(7) HashAggregate(keys=[user_id#456], functions=[avg(basket_size#423L)], output=[user_avg_basket#447])
+                  +- ReusedExchange [user_id#456, sum#478, count#479L], Exchange hashpartitioning(user_id#17, 64), ENSURE_REQUIREMENTS, [plan_id=1638]
+

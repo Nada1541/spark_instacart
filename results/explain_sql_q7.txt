@@ -1,0 +1,71 @@
+== Parsed Logical Plan ==
+'Sort ['line_items DESC NULLS LAST], true
++- 'UnresolvedHint BROADCAST, ['a]
+   +- 'Aggregate ['a.aisle], ['a.aisle, 'COUNT(1) AS line_items#482]
+      +- 'Join Inner, ('pr.aisle_id = 'a.aisle_id)
+         :- 'Join Inner, ('p.product_id = 'pr.product_id)
+         :  :- 'SubqueryAlias p
+         :  :  +- 'UnresolvedRelation [prior], [], false
+         :  +- 'SubqueryAlias pr
+         :     +- 'UnresolvedRelation [products], [], false
+         +- 'SubqueryAlias a
+            +- 'UnresolvedRelation [aisles], [], false
+
+== Analyzed Logical Plan ==
+aisle: string, line_items: bigint
+Sort [line_items#482L DESC NULLS LAST], true
++- Aggregate [aisle#1], [aisle#1, count(1) AS line_items#482L]
+   +- Join Inner, (aisle_id#10 = aisle_id#0)
+      :- Join Inner, (product_id#35 = product_id#8)
+      :  :- SubqueryAlias p
+      :  :  +- SubqueryAlias prior
+      :  :     +- View (`prior`, [order_id#34,product_id#35,add_to_cart_order#36,reordered#37])
+      :  :        +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+      :  +- SubqueryAlias pr
+      :     +- SubqueryAlias products
+      :        +- View (`products`, [product_id#8,product_name#9,aisle_id#10,department_id#11])
+      :           +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+      +- ResolvedHint (strategy=broadcast)
+         +- SubqueryAlias a
+            +- SubqueryAlias aisles
+               +- View (`aisles`, [aisle_id#0,aisle#1])
+                  +- Relation [aisle_id#0,aisle#1] parquet
+
+== Optimized Logical Plan ==
+Sort [line_items#482L DESC NULLS LAST], true
++- Aggregate [aisle#1], [aisle#1, count(1) AS line_items#482L]
+   +- Project [aisle#1]
+      +- Join Inner, (aisle_id#10 = aisle_id#0), rightHint=(strategy=broadcast)
+         :- Project [aisle_id#10]
+         :  +- Join Inner, (product_id#35 = product_id#8)
+         :     :- Project [product_id#35]
+         :     :  +- Filter isnotnull(product_id#35)
+         :     :     +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+         :     +- Project [product_id#8, aisle_id#10]
+         :        +- Filter (isnotnull(product_id#8) AND isnotnull(aisle_id#10))
+         :           +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+         +- Filter isnotnull(aisle_id#0)
+            +- Relation [aisle_id#0,aisle#1] parquet
+
+== Physical Plan ==
+*(5) Sort [line_items#482L DESC NULLS LAST], true, 0
++- Exchange rangepartitioning(line_items#482L DESC NULLS LAST, 64), ENSURE_REQUIREMENTS, [plan_id=2197]
+   +- *(4) HashAggregate(keys=[aisle#1], functions=[count(1)], output=[aisle#1, line_items#482L])
+      +- Exchange hashpartitioning(aisle#1, 64), ENSURE_REQUIREMENTS, [plan_id=2193]
+         +- *(3) HashAggregate(keys=[aisle#1], functions=[partial_count(1)], output=[aisle#1, count#487L])
+            +- *(3) Project [aisle#1]
+               +- *(3) BroadcastHashJoin [aisle_id#10], [aisle_id#0], Inner, BuildRight, false
+                  :- *(3) Project [aisle_id#10]
+                  :  +- *(3) BroadcastHashJoin [product_id#35], [product_id#8], Inner, BuildRight, false
+                  :     :- *(3) Filter isnotnull(product_id#35)
+                  :     :  +- *(3) ColumnarToRow
+                  :     :     +- FileScan parquet [product_id#35] Batched: true, DataFilters: [isnotnull(product_id#35)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(product_id)], ReadSchema: struct<product_id:int>
+                  :     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=2179]
+                  :        +- *(1) Filter (isnotnull(product_id#8) AND isnotnull(aisle_id#10))
+                  :           +- *(1) ColumnarToRow
+                  :              +- FileScan parquet [product_id#8,aisle_id#10] Batched: true, DataFilters: [isnotnull(product_id#8), isnotnull(aisle_id#10)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/products], PartitionFilters: [], PushedFilters: [IsNotNull(product_id), IsNotNull(aisle_id)], ReadSchema: struct<product_id:int,aisle_id:int>
+                  +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=2187]
+                     +- *(2) Filter isnotnull(aisle_id#0)
+                        +- *(2) ColumnarToRow
+                           +- FileScan parquet [aisle_id#0,aisle#1] Batched: true, DataFilters: [isnotnull(aisle_id#0)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/aisles], PartitionFilters: [], PushedFilters: [IsNotNull(aisle_id)], ReadSchema: struct<aisle_id:int,aisle:string>
+

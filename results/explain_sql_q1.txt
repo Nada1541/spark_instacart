@@ -1,0 +1,62 @@
+== Parsed Logical Plan ==
+CTE [basket]
+:  +- 'SubqueryAlias basket
+:     +- 'Aggregate ['order_id], ['order_id, 'COUNT(1) AS basket_size#50]
+:        +- 'UnresolvedRelation [prior], [], false
++- 'Project ['o.order_id, 'o.user_id, 'o.order_dow, 'o.order_hour_of_day, 'b.basket_size, 'o.order_ts]
+   +- 'Filter (('o.order_dow IN (0,1) AND (('o.order_hour_of_day >= 11) AND ('o.order_hour_of_day <= 14))) AND ('b.basket_size > 10))
+      +- 'Join Inner, ('o.order_id = 'b.order_id)
+         :- 'SubqueryAlias o
+         :  +- 'UnresolvedRelation [orders], [], false
+         +- 'SubqueryAlias b
+            +- 'UnresolvedRelation [basket], [], false
+
+== Analyzed Logical Plan ==
+order_id: int, user_id: int, order_dow: int, order_hour_of_day: int, basket_size: bigint, order_ts: timestamp
+WithCTE
+:- CTERelationDef 0, false
+:  +- SubqueryAlias basket
+:     +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#50L]
+:        +- SubqueryAlias prior
+:           +- View (`prior`, [order_id#34,product_id#35,add_to_cart_order#36,reordered#37])
+:              +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
++- Project [order_id#16, user_id#17, order_dow#20, order_hour_of_day#21, basket_size#50L, order_ts#24]
+   +- Filter ((order_dow#20 IN (0,1) AND ((order_hour_of_day#21 >= 11) AND (order_hour_of_day#21 <= 14))) AND (basket_size#50L > cast(10 as bigint)))
+      +- Join Inner, (order_id#16 = order_id#34)
+         :- SubqueryAlias o
+         :  +- SubqueryAlias orders
+         :     +- View (`orders`, [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24])
+         :        +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+         +- SubqueryAlias b
+            +- SubqueryAlias basket
+               +- CTERelationRef 0, true, [order_id#34, basket_size#50L], false
+
+== Optimized Logical Plan ==
+Project [order_id#16, user_id#17, order_dow#20, order_hour_of_day#21, basket_size#50L, order_ts#24]
++- Join Inner, (order_id#16 = order_id#34)
+   :- Project [order_id#16, user_id#17, order_dow#20, order_hour_of_day#21, order_ts#24]
+   :  +- Filter ((isnotnull(order_hour_of_day#21) AND ((order_dow#20 IN (0,1) AND (order_hour_of_day#21 >= 11)) AND (order_hour_of_day#21 <= 14))) AND isnotnull(order_id#16))
+   :     +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+   +- Filter (basket_size#50L > 10)
+      +- Aggregate [order_id#34], [order_id#34, count(1) AS basket_size#50L]
+         +- Project [order_id#34]
+            +- Filter isnotnull(order_id#34)
+               +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+
+== Physical Plan ==
+*(5) Project [order_id#16, user_id#17, order_dow#20, order_hour_of_day#21, basket_size#50L, order_ts#24]
++- *(5) SortMergeJoin [order_id#16], [order_id#34], Inner
+   :- *(2) Sort [order_id#16 ASC NULLS FIRST], false, 0
+   :  +- Exchange hashpartitioning(order_id#16, 64), ENSURE_REQUIREMENTS, [plan_id=81]
+   :     +- *(1) Filter ((((isnotnull(order_hour_of_day#21) AND order_dow#20 IN (0,1)) AND (order_hour_of_day#21 >= 11)) AND (order_hour_of_day#21 <= 14)) AND isnotnull(order_id#16))
+   :        +- *(1) ColumnarToRow
+   :           +- FileScan parquet [order_id#16,user_id#17,order_dow#20,order_hour_of_day#21,order_ts#24] Batched: true, DataFilters: [isnotnull(order_hour_of_day#21), order_dow#20 IN (0,1), (order_hour_of_day#21 >= 11), (order_hou..., Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [IsNotNull(order_hour_of_day), In(order_dow, [0,1]), GreaterThanOrEqual(order_hour_of_day,11), Le..., ReadSchema: struct<order_id:int,user_id:int,order_dow:int,order_hour_of_day:int,order_ts:timestamp>
+   +- *(4) Sort [order_id#34 ASC NULLS FIRST], false, 0
+      +- *(4) Filter (basket_size#50L > 10)
+         +- *(4) HashAggregate(keys=[order_id#34], functions=[count(1)], output=[order_id#34, basket_size#50L])
+            +- Exchange hashpartitioning(order_id#34, 64), ENSURE_REQUIREMENTS, [plan_id=91]
+               +- *(3) HashAggregate(keys=[order_id#34], functions=[partial_count(1)], output=[order_id#34, count#59L])
+                  +- *(3) Filter isnotnull(order_id#34)
+                     +- *(3) ColumnarToRow
+                        +- FileScan parquet [order_id#34] Batched: true, DataFilters: [isnotnull(order_id#34)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int>
+

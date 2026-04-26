@@ -5,13 +5,7 @@ data/*.zip
 data/*.7z
 data/output/
 
-# Generated benchmark artifacts (
-results/*.csv
-results/*.txt
-results/*.png
-results/spark-events/
-!results/README.md
-!results/REFERENCE_PLANS.txt
+
 
 # Spark
 spark-warehouse/

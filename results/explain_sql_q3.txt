@@ -1,0 +1,83 @@
+== Parsed Logical Plan ==
+'Aggregate ['d.department, 'o.order_dow, 'o.order_hour_of_day], ['d.department, 'o.order_dow, 'o.order_hour_of_day, 'COUNT(1) AS line_items#170, 'AVG('p.reordered) AS reorder_rate#171]
++- 'Join Inner, ('pr.department_id = 'd.department_id)
+   :- 'Join Inner, ('p.product_id = 'pr.product_id)
+   :  :- 'Join Inner, ('p.order_id = 'o.order_id)
+   :  :  :- 'SubqueryAlias p
+   :  :  :  +- 'UnresolvedRelation [prior], [], false
+   :  :  +- 'SubqueryAlias o
+   :  :     +- 'UnresolvedRelation [orders], [], false
+   :  +- 'SubqueryAlias pr
+   :     +- 'UnresolvedRelation [products], [], false
+   +- 'SubqueryAlias d
+      +- 'UnresolvedRelation [departments], [], false
+
+== Analyzed Logical Plan ==
+department: string, order_dow: int, order_hour_of_day: int, line_items: bigint, reorder_rate: double
+Aggregate [department#5, order_dow#20, order_hour_of_day#21], [department#5, order_dow#20, order_hour_of_day#21, count(1) AS line_items#170L, avg(reordered#37) AS reorder_rate#171]
++- Join Inner, (department_id#11 = department_id#4)
+   :- Join Inner, (product_id#35 = product_id#8)
+   :  :- Join Inner, (order_id#34 = order_id#16)
+   :  :  :- SubqueryAlias p
+   :  :  :  +- SubqueryAlias prior
+   :  :  :     +- View (`prior`, [order_id#34,product_id#35,add_to_cart_order#36,reordered#37])
+   :  :  :        +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+   :  :  +- SubqueryAlias o
+   :  :     +- SubqueryAlias orders
+   :  :        +- View (`orders`, [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24])
+   :  :           +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+   :  +- SubqueryAlias pr
+   :     +- SubqueryAlias products
+   :        +- View (`products`, [product_id#8,product_name#9,aisle_id#10,department_id#11])
+   :           +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+   +- SubqueryAlias d
+      +- SubqueryAlias departments
+         +- View (`departments`, [department_id#4,department#5])
+            +- Relation [department_id#4,department#5] parquet
+
+== Optimized Logical Plan ==
+Aggregate [department#5, order_dow#20, order_hour_of_day#21], [department#5, order_dow#20, order_hour_of_day#21, count(1) AS line_items#170L, avg(reordered#37) AS reorder_rate#171]
++- Project [reordered#37, order_dow#20, order_hour_of_day#21, department#5]
+   +- Join Inner, (department_id#11 = department_id#4)
+      :- Project [reordered#37, order_dow#20, order_hour_of_day#21, department_id#11]
+      :  +- Join Inner, (product_id#35 = product_id#8)
+      :     :- Project [product_id#35, reordered#37, order_dow#20, order_hour_of_day#21]
+      :     :  +- Join Inner, (order_id#34 = order_id#16)
+      :     :     :- Project [order_id#34, product_id#35, reordered#37]
+      :     :     :  +- Filter (isnotnull(order_id#34) AND isnotnull(product_id#35))
+      :     :     :     +- Relation [order_id#34,product_id#35,add_to_cart_order#36,reordered#37] parquet
+      :     :     +- Project [order_id#16, order_dow#20, order_hour_of_day#21]
+      :     :        +- Filter isnotnull(order_id#16)
+      :     :           +- Relation [order_id#16,user_id#17,eval_set#18,order_number#19,order_dow#20,order_hour_of_day#21,days_since_prior_order#22,order_date#23,order_ts#24] parquet
+      :     +- Project [product_id#8, department_id#11]
+      :        +- Filter (isnotnull(product_id#8) AND isnotnull(department_id#11))
+      :           +- Relation [product_id#8,product_name#9,aisle_id#10,department_id#11] parquet
+      +- Filter isnotnull(department_id#4)
+         +- Relation [department_id#4,department#5] parquet
+
+== Physical Plan ==
+*(5) HashAggregate(keys=[department#5, order_dow#20, order_hour_of_day#21], functions=[count(1), avg(reordered#37)], output=[department#5, order_dow#20, order_hour_of_day#21, line_items#170L, reorder_rate#171])
++- Exchange hashpartitioning(department#5, order_dow#20, order_hour_of_day#21, 64), ENSURE_REQUIREMENTS, [plan_id=493]
+   +- *(4) HashAggregate(keys=[department#5, order_dow#20, order_hour_of_day#21], functions=[partial_count(1), partial_avg(reordered#37)], output=[department#5, order_dow#20, order_hour_of_day#21, count#182L, sum#183, count#184L])
+      +- *(4) Project [reordered#37, order_dow#20, order_hour_of_day#21, department#5]
+         +- *(4) BroadcastHashJoin [department_id#11], [department_id#4], Inner, BuildRight, false
+            :- *(4) Project [reordered#37, order_dow#20, order_hour_of_day#21, department_id#11]
+            :  +- *(4) BroadcastHashJoin [product_id#35], [product_id#8], Inner, BuildRight, false
+            :     :- *(4) Project [product_id#35, reordered#37, order_dow#20, order_hour_of_day#21]
+            :     :  +- *(4) BroadcastHashJoin [order_id#34], [order_id#16], Inner, BuildRight, false
+            :     :     :- *(4) Filter (isnotnull(order_id#34) AND isnotnull(product_id#35))
+            :     :     :  +- *(4) ColumnarToRow
+            :     :     :     +- FileScan parquet [order_id#34,product_id#35,reordered#37] Batched: true, DataFilters: [isnotnull(order_id#34), isnotnull(product_id#35)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/order_products_prior], PartitionFilters: [], PushedFilters: [IsNotNull(order_id), IsNotNull(product_id)], ReadSchema: struct<order_id:int,product_id:int,reordered:int>
+            :     :     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=471]
+            :     :        +- *(1) Filter isnotnull(order_id#16)
+            :     :           +- *(1) ColumnarToRow
+            :     :              +- FileScan parquet [order_id#16,order_dow#20,order_hour_of_day#21] Batched: true, DataFilters: [isnotnull(order_id#16)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/orders], PartitionFilters: [], PushedFilters: [IsNotNull(order_id)], ReadSchema: struct<order_id:int,order_dow:int,order_hour_of_day:int>
+            :     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=479]
+            :        +- *(2) Filter (isnotnull(product_id#8) AND isnotnull(department_id#11))
+            :           +- *(2) ColumnarToRow
+            :              +- FileScan parquet [product_id#8,department_id#11] Batched: true, DataFilters: [isnotnull(product_id#8), isnotnull(department_id#11)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/products], PartitionFilters: [], PushedFilters: [IsNotNull(product_id), IsNotNull(department_id)], ReadSchema: struct<product_id:int,department_id:int>
+            +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, false] as bigint)),false), [plan_id=487]
+               +- *(3) Filter isnotnull(department_id#4)
+                  +- *(3) ColumnarToRow
+                     +- FileScan parquet [department_id#4,department#5] Batched: true, DataFilters: [isnotnull(department_id#4)], Format: Parquet, Location: InMemoryFileIndex(1 paths)[file:/app/data/output/parquet/departments], PartitionFilters: [], PushedFilters: [IsNotNull(department_id)], ReadSchema: struct<department_id:int,department:string>
+
